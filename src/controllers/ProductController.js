@@ -6,6 +6,7 @@ const {
   parsePagination, parseFilterIds, parseFields, parseList,
 } = require('../services/productInput');
 const { storeImage, removeLocalImage } = require('../services/imageStorage');
+const { productOutput } = require('../services/productOutput');
 
 const relations = [
   { association: 'images' },
@@ -22,7 +23,7 @@ async function find(req, res) {
     const id = positiveId(req.params.id);
     const product = await getProduct(id);
     if (!product) throw new HttpError(404, 'Produto não encontrado.');
-    return res.status(200).json({ data: product });
+    return res.status(200).json(productOutput(product));
   } catch (error) { return sendError(res, error, 'Erro ao buscar produto'); }
 }
 
@@ -40,10 +41,22 @@ function parsePriceRange(value) {
 
 function optionCriteria(query) {
   const parsed = [];
+  const options = {};
+  // Compatível com Express "extended": ?option[45]=GG&option[46]=PP
+  // É interpretado como req.query.option = { "45": "GG", "46": "PP" }.
+  if (query.option !== undefined) {
+    if (!query.option || typeof query.option !== 'object' || Array.isArray(query.option)) {
+      throw new HttpError(400, 'Filtro option inválido.');
+    }
+    Object.assign(options, query.option);
+  }
+  // Também aceita query parser "simple", com a chave literal "option[45]".
   for (const [key, value] of Object.entries(query)) {
-    const match = /^option\[([1-9]\d*)\]$/.exec(key);
-    if (!match) continue;
-    parsed.push({ id: positiveId(match[1], 'option'), values: parseList(value, key) });
+    const match = /^option\[(\d+)\]$/.exec(key);
+    if (match) options[match[1]] = value;
+  }
+  for (const [id, value] of Object.entries(options)) {
+    parsed.push({ id: positiveId(id, 'option'), values: parseList(value, `option[${id}]`) });
   }
   return parsed;
 }
@@ -107,24 +120,18 @@ async function search(req, res) {
       ...(limit === -1 ? {} : { limit, offset: (page - 1) * limit }),
     });
     const productIds = rows.map((item) => item.id);
-    const images = productIds.length ? await ProductImage.findAll({
-      where: { product_id: { [Op.in]: productIds } },
-      order: [['id', 'ASC']],
+    // Carrega as associações apenas para os produtos da página encontrada.
+    const detailedRows = productIds.length ? await Product.findAll({
+      where: { id: { [Op.in]: productIds } },
+      include: relations,
     }) : [];
-    const imageMap = new Map();
-    for (const image of images) {
-      if (!imageMap.has(image.product_id)) imageMap.set(image.product_id, []);
-      imageMap.get(image.product_id).push({ id: image.id, enabled: image.enabled, path: image.path });
-    }
-
-    const data = rows.map((instance) => {
-      const product = instance.get({ plain: true });
-      if (fields) {
-        const result = {};
-        for (const field of fields) result[field] = product[field];
-        return result;
-      }
-      return { ...product, images: imageMap.get(product.id) ?? [] };
+    const byId = new Map(detailedRows.map((item) => [item.id, productOutput(item)]));
+    const data = productIds.map((id) => {
+      const product = byId.get(id);
+      if (!fields) return product;
+      const selected = {};
+      for (const field of fields) selected[field] = product[field];
+      return selected;
     });
     return res.status(200).json({ data, total: count, limit, page });
   } catch (error) { return sendError(res, error, 'Erro ao pesquisar produtos'); }
@@ -224,8 +231,9 @@ async function persist(req, res, isUpdate) {
     });
 
     for (const imagePath of deletedPaths) await removeLocalImage(imagePath);
+    if (isUpdate) return res.status(204).send();
     const data = await getProduct(productId);
-    return res.status(isUpdate ? 200 : 201).json({ data });
+    return res.status(201).json(productOutput(data));
   } catch (error) {
     await Promise.all(writtenPaths.map(removeLocalImage));
     return sendError(res, error, isUpdate ? 'Erro ao atualizar produto' : 'Erro ao criar produto');

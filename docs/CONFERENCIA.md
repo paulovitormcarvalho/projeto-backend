@@ -1,24 +1,18 @@
-# Conferência do projeto em relação às referências disponíveis
+# Auditoria da implementação contra o enunciado oficial
 
-Enunciado informado na conversa: https://github.com/digitalcollegebr/projeto-backend
+Enunciado: https://github.com/digitalcollegebr/projeto-backend
 
-Não foi possível abrir diretamente o enunciado oficial neste ambiente (GitHub bloqueou o acesso ao repositório informado). Foram consultadas duas implementações públicas que referenciam a mesma atividade:
-- https://github.com/Edsmonteiro/digital-store-backend
-- https://github.com/Mattferreira1/Projeto-backend---Digital-college/blob/main/README.md
+Revisão pós-publicação em 19/11/2026: diferenças encontradas em formatos de GET, retornos PUT, aceitação de `images.content`, atributos opcionais, `option[ID]`, update de usuários sem senha e armazenamento CSV das opções. Este complemento propõe corrigir esses itens.
 
-O código entregue cobre os endpoints, os seis modelos, JWT, CRUD de produtos com categorias/imagens/opções, paginação e filtros, documentação OpenAPI e testes de validação mencionados nas referências. A aderência **exata** à versão do enunciado recebida por sua turma permanece pendente de conferência direta.
+## Passos obrigatórios de validação no computador com MySQL
 
-## Checklist técnico
+1. Backup do banco MySQL antes de migrations.
+2. Instalar patch e suas dependências.
+3. Rodar `npx sequelize-cli db:migrate`; isso converte a coluna product_options.values de JSON para VARCHAR(255).
+4. Rodar `node --test` e `npm run test:jest`.
+5. Testar GET, POST, PUT, DELETE dos 3 módulos, filtro `option[ID]`, payload de imagem `{type,content}` e resposta 204 de PUT.
+6. Atualizar o Swagger, verificar o Git e publicar outro commit.
 
-- [x] Models: Users, Categories, Products, ProductImages, ProductOptions e ProductCategories.
-- [x] Relacionamentos Sequelize.
-- [x] Usuários: CRUD e login JWT; senha bcrypt.
-- [x] Categoria: CRUD, filtros, paginação.
-- [x] Produtos: CRUD, transações, vínculos, opções e imagens.
-- [x] Busca: match, category_ids, price-range, option[id], fields, limit, page.
-- [x] Validações e códigos HTTP.
-- [x] Documentação OpenAPI e Swagger UI.
-- [x] 21 testes de validação; sintaxe Node.
-- [ ] Teste completo no MySQL do computador do aluno.
-- [ ] Comparação integral com o enunciado original.
-- [ ] Conferência do Git status e publicação no repositório do aluno.
+O enunciado tem inconsistências internas: seção JWT menciona 400 para token ausente, enquanto várias rotas especificam 401; mantivemos 401 (padrão HTTP). Para GET de usuário, optamos por acesso público porque a seção final especifica autenticação em POST/PUT/DELETE. O cadastro e o login permanecem públicos por necessidade funcional.
+
+Nota: as migrations originais usam os nomes `createdAt` e `updatedAt` conforme Sequelize padrão com `timestamps:true`, enquanto o enunciado descreve `created_at` e `updated_at`; esse ponto deve ser validado com o avaliador antes de alterar um banco existente.

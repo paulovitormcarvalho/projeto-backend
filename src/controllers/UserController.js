@@ -13,20 +13,12 @@ async function find(req, res) {
       });
     }
 
-    if (id !== req.userId) {
-      return res.status(403).json({
-        message: "Você não tem permissão para acessar este usuário.",
-      });
-    }
-
     const user = await User.findByPk(id, {
       attributes: [
         "id",
         "firstname",
         "surname",
         "email",
-        "createdAt",
-        "updatedAt",
       ],
     });
 
@@ -36,9 +28,7 @@ async function find(req, res) {
       });
     }
 
-    return res.status(200).json({
-      data: user,
-    });
+    return res.status(200).json(user);
   } catch (error) {
     console.error("Erro ao buscar usuário:", error);
 
@@ -83,11 +73,11 @@ async function create(req, res) {
 
     if (
       typeof password !== "string" ||
-      password.length < 8 ||
+      password.length < 6 ||
       Buffer.byteLength(password, "utf8") > 72
     ) {
       return res.status(400).json({
-        message: "A senha deve ter pelo menos 8 caracteres e no máximo 72 bytes.",
+        message: "A senha deve ter pelo menos 6 caracteres e no máximo 72 bytes.",
       });
     }
 
@@ -202,94 +192,35 @@ async function login(req, res) {
 async function update(req, res) {
   try {
     const { id } = req.params;
-
-    if (!/^[1-9]\d*$/.test(id)) {
-      return res.status(400).json({ message: "ID inválido." });
-    }
-
+    if (!/^[1-9]\d*$/.test(id)) return res.status(400).json({ message: "ID inválido." });
     if (id !== req.userId) {
-      return res.status(403).json({
-        message: "Você não tem permissão para editar este usuário.",
-      });
+      return res.status(403).json({ message: "Você não tem permissão para editar este usuário." });
     }
 
-    const { firstname, surname, email, password, confirmPassword } = req.body ?? {};
-
+    const { firstname, surname, email } = req.body ?? {};
     if (
-      typeof firstname !== "string" ||
-      !firstname.trim() ||
-      firstname.trim().length > 100 ||
-      typeof surname !== "string" ||
-      !surname.trim() ||
-      surname.trim().length > 100
-    ) {
-      return res.status(400).json({
-        message: "Nome e sobrenome devem ter até 100 caracteres.",
-      });
-    }
-
+      typeof firstname !== "string" || !firstname.trim() || firstname.trim().length > 100 ||
+      typeof surname !== "string" || !surname.trim() || surname.trim().length > 100
+    ) return res.status(400).json({ message: "Nome e sobrenome inválidos." });
     if (
-      typeof email !== "string" ||
-      email.length > 255 ||
+      typeof email !== "string" || email.length > 255 ||
       !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())
-    ) {
-      return res.status(400).json({ message: "E-mail inválido." });
-    }
-
-    if (
-      typeof password !== "string" ||
-      password.length < 8 ||
-      Buffer.byteLength(password, "utf8") > 72
-    ) {
-      return res.status(400).json({
-        message: "A senha deve ter pelo menos 8 caracteres e no máximo 72 bytes.",
-      });
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({
-        message: "A confirmação de senha não corresponde à senha.",
-      });
-    }
+    ) return res.status(400).json({ message: "E-mail inválido." });
 
     const user = await User.findByPk(id);
-
-    if (!user) {
-      return res.status(404).json({
-        message: "Usuário não encontrado.",
-      });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-
+    if (!user) return res.status(404).json({ message: "Usuário não encontrado." });
     await user.update({
       firstname: firstname.trim(),
       surname: surname.trim(),
       email: email.trim().toLowerCase(),
-      password: passwordHash,
     });
-
-    return res.status(200).json({
-      data: {
-        id: user.id,
-        firstname: user.firstname,
-        surname: user.surname,
-        email: user.email,
-        createdAt: user.createdAt,
-        updatedAt: user.updatedAt,
-      },
-    });
+    return res.status(204).send();
   } catch (error) {
     if (error instanceof UniqueConstraintError) {
-      return res.status(409).json({
-        message: "Já existe um usuário com esse e-mail.",
-      });
+      return res.status(409).json({ message: "Já existe um usuário com esse e-mail." });
     }
-
     console.error("Erro ao atualizar usuário:", error);
-    return res.status(500).json({
-      message: "Erro interno do servidor.",
-    });
+    return res.status(500).json({ message: "Erro interno do servidor." });
   }
 }
 

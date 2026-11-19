@@ -51,7 +51,7 @@ async function find(req, res) {
   try {
     const category = await Category.findByPk(positiveId(req.params.id));
     if (!category) throw new HttpError(404, 'Categoria não encontrada.');
-    return res.status(200).json({ data: category });
+    return res.status(200).json({ id: category.id, name: category.name, slug: category.slug, use_in_menu: category.use_in_menu });
   } catch (error) { return sendError(res, error, 'Erro ao buscar categoria'); }
 }
 
@@ -70,7 +70,7 @@ async function update(req, res) {
     const category = await Category.findByPk(id);
     if (!category) throw new HttpError(404, 'Categoria não encontrada.');
     await category.update(data);
-    return res.status(200).json({ data: category });
+    return res.status(204).send();
   } catch (error) { return sendError(res, error, 'Erro ao atualizar categoria'); }
 }
 

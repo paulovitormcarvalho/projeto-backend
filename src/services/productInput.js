@@ -3,6 +3,7 @@ const { HttpError, idArray, positiveId } = require('../utils/http');
 const productColumns = [
   'id', 'enabled', 'name', 'slug', 'stock', 'description',
   'price', 'price_with_discount', 'createdAt', 'updatedAt',
+  'category_ids', 'images', 'options',
 ];
 
 function nonEmptyText(value, field, max = 255) {
@@ -29,12 +30,13 @@ function parseProduct(body, isUpdate = false) {
     throw new HttpError(400, 'O corpo deve ser um objeto JSON.');
   }
   const record = {};
-  const required = ['name', 'slug', 'stock', 'description', 'price', 'price_with_discount'];
+  const required = ['name', 'slug', 'price', 'price_with_discount'];
   if (!isUpdate && required.some((field) => body[field] === undefined)) {
-    throw new HttpError(400, 'Campos obrigatórios: name, slug, stock, description, price, price_with_discount.');
+    throw new HttpError(400, 'Campos obrigatórios: name, slug, price, price_with_discount.');
   }
   if (body.name !== undefined) record.name = nonEmptyText(body.name, 'name');
   if (body.slug !== undefined) record.slug = nonEmptyText(body.slug, 'slug');
+  if (!isUpdate && body.description === undefined) record.description = '';
   if (body.description !== undefined) {
     if (typeof body.description !== 'string' || body.description.length > 65000) {
       throw new HttpError(400, 'description deve ser texto de até 65000 caracteres.');
@@ -96,11 +98,16 @@ function parseOption(raw, isUpdate) {
       values.some((x) => typeof x !== 'string' || !x.trim() || x.length > 255)) {
       throw new HttpError(400, 'values deve ser uma lista não vazia de textos.');
     }
+    if (values.some((x) => x.includes(',')) || values.join(',').length > 255) {
+      throw new HttpError(400, 'values não pode conter vírgulas e deve caber em até 255 caracteres.');
+    }
     data.values = values;
   }
-  if (!isUpdate && ['title', 'shape', 'type', 'values'].some((f) => data[f] === undefined)) {
-    throw new HttpError(400, 'Opção nova exige title, shape, type e values.');
+  if (!isUpdate && ['title', 'values'].some((f) => data[f] === undefined)) {
+    throw new HttpError(400, 'Opção nova exige title e values.');
   }
+  if (!isUpdate && data.shape === undefined) data.shape = 'square';
+  if (!isUpdate && data.type === undefined) data.type = 'text';
   if (!isUpdate && data.radius === undefined) data.radius = 0;
   return data;
 }
@@ -115,8 +122,12 @@ function parseImage(raw, isUpdate) {
     }
     result.type = raw.type;
   }
-  if (raw.path !== undefined) result.path = nonEmptyText(raw.path, 'path', 6000000);
-  if (!isUpdate && !result.path) throw new HttpError(400, 'Imagem nova exige path.');
+  if (raw.path !== undefined && raw.content !== undefined) {
+    throw new HttpError(400, 'Use apenas content ou path na imagem.');
+  }
+  const content = raw.content ?? raw.path;
+  if (content !== undefined) result.path = nonEmptyText(content, 'content', 6000000);
+  if (!isUpdate && !result.path) throw new HttpError(400, 'Imagem nova exige content.');
   if (!isUpdate && result.enabled === undefined) result.enabled = true;
   return result;
 }

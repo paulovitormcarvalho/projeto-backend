@@ -44,8 +44,18 @@ const ProductOption = sequelize.define(
     },
 
     values: {
-      type: DataTypes.JSON,
+      type: DataTypes.STRING(255),
       allowNull: false,
+      get() {
+        const value = this.getDataValue("values");
+        return value ? value.split(",") : [];
+      },
+      set(value) {
+        if (!Array.isArray(value) || value.some((item) => typeof item !== "string" || item.includes(","))) {
+          throw new Error("values deve ser uma lista de textos sem vírgulas.");
+        }
+        this.setDataValue("values", value.join(","));
+      },
     },
   },
   {

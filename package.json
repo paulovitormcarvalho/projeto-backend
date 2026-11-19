@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:jest": "jest --runInBand tests/jest",
+    "dev:nodemon": "nodemon src/server.js"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +29,8 @@
     }
   },
   "devDependencies": {
+    "jest": "29.7.0",
+    "nodemon": "^3.1.11",
     "sequelize-cli": "^6.6.2"
   }
 }

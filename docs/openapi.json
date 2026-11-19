@@ -292,7 +292,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/UserResult"
+                  "$ref": "#/components/schemas/User"
                 }
               }
             }
@@ -380,18 +380,8 @@
         "tags": [
           "Usuários"
         ],
-        "summary": "Atualiza própria conta (todos os campos)",
+        "summary": "Atualiza nome, sobrenome e e-mail da própria conta (não altera senha).",
         "responses": {
-          "200": {
-            "description": "Sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/UserResult"
-                }
-              }
-            }
-          },
           "400": {
             "description": "Requisição inválida",
             "content": {
@@ -451,6 +441,9 @@
                 }
               }
             }
+          },
+          "204": {
+            "description": "Atualizado, sem corpo de resposta."
           }
         },
         "security": [
@@ -464,7 +457,24 @@
           "content": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/UserCreate"
+                "type": "object",
+                "required": [
+                  "firstname",
+                  "surname",
+                  "email"
+                ],
+                "properties": {
+                  "firstname": {
+                    "type": "string"
+                  },
+                  "surname": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string",
+                    "format": "email"
+                  }
+                }
               }
             }
           }
@@ -806,7 +816,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/CategoryResult"
+                  "$ref": "#/components/schemas/Category"
                 }
               }
             }
@@ -891,16 +901,6 @@
         ],
         "summary": "Atualiza categoria",
         "responses": {
-          "200": {
-            "description": "Sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CategoryResult"
-                }
-              }
-            }
-          },
           "400": {
             "description": "Requisição inválida",
             "content": {
@@ -960,6 +960,9 @@
                 }
               }
             }
+          },
+          "204": {
+            "description": "Atualizado, sem corpo de resposta."
           }
         },
         "security": [
@@ -1333,7 +1336,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "$ref": "#/components/schemas/ProductResult"
+                  "$ref": "#/components/schemas/Product"
                 }
               }
             }
@@ -1418,16 +1421,6 @@
         ],
         "summary": "Atualiza campos e relações; id/deleted nas listas",
         "responses": {
-          "200": {
-            "description": "Sucesso",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProductResult"
-                }
-              }
-            }
-          },
           "400": {
             "description": "Requisição inválida",
             "content": {
@@ -1487,6 +1480,9 @@
                 }
               }
             }
+          },
+          "204": {
+            "description": "Atualizado, sem corpo de resposta."
           }
         },
         "security": [
@@ -1685,6 +1681,9 @@
       "User": {
         "type": "object",
         "properties": {
+          "id": {
+            "type": "integer"
+          },
           "firstname": {
             "type": "string"
           },
@@ -1693,17 +1692,6 @@
           },
           "email": {
             "type": "string"
-          },
-          "id": {
-            "type": "integer"
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "updatedAt": {
-            "type": "string",
-            "format": "date-time"
           }
         }
       },
@@ -1798,7 +1786,12 @@
           },
           "path": {
             "type": "string",
-            "description": "Base64, data:image/...;base64,... ou URL HTTPS"
+            "description": "Base64, data:image/...;base64,... ou URL HTTPS",
+            "deprecated": true
+          },
+          "content": {
+            "type": "string",
+            "description": "Imagem em base64 ou URL HTTPS (conforme enunciado)"
           }
         }
       },
@@ -1859,8 +1852,6 @@
         "required": [
           "name",
           "slug",
-          "stock",
-          "description",
           "price",
           "price_with_discount"
         ],
@@ -1908,7 +1899,7 @@
       },
       "Product": {
         "type": "object",
-        "description": "Produto com imagens, opções, categorias e timestamps",
+        "description": "Produto público com category_ids, images.content e opções",
         "properties": {
           "id": {
             "type": "integer"
@@ -1934,19 +1925,50 @@
           "images": {
             "type": "array",
             "items": {
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "content": {
+                  "type": "string"
+                }
+              }
             }
           },
           "options": {
             "type": "array",
             "items": {
-              "type": "object"
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "shape": {
+                  "type": "string"
+                },
+                "radius": {
+                  "type": "integer"
+                },
+                "type": {
+                  "type": "string"
+                },
+                "values": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                }
+              }
             }
           },
-          "categories": {
+          "category_ids": {
             "type": "array",
             "items": {
-              "$ref": "#/components/schemas/Category"
+              "type": "integer"
             }
           }
         }
